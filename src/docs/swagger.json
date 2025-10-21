@@ -1,0 +1,397 @@
+{
+  "openapi": "3.0.3",
+  "info": { "title": "FoodExpress API", "version": "1.0.0" },
+  "servers": [{ "url": "http://localhost:5000" }],
+  "tags": [
+    { "name": "Auth/Users" },
+    { "name": "Restaurants" },
+    { "name": "Menus" }
+  ],
+  "paths": {
+    "/api/users": {
+      "post": {
+        "tags": ["Auth/Users"],
+        "summary": "Créer un utilisateur (public)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/UserCreate" } }
+          }
+        },
+        "responses": {
+          "201": { "description": "Créé", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserSafe" } } } },
+          "400": { "description": "Validation error" },
+          "409": { "description": "Email déjà utilisé" }
+        }
+      },
+      "get": {
+        "tags": ["Auth/Users"],
+        "summary": "Lister les utilisateurs (admin uniquement)",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": { "type": "array", "items": { "$ref": "#/components/schemas/UserSafe" } },
+                    "total": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Non authentifié" },
+          "403": { "description": "Interdit (admin requis)" }
+        }
+      }
+    },
+    "/api/users/login": {
+      "post": {
+        "tags": ["Auth/Users"],
+        "summary": "Login (public) → JWT",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/UserLogin" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": { "application/json": { "schema": { "type": "object", "properties": { "token": { "type": "string" } } } } }
+          },
+          "400": { "description": "email/password requis" },
+          "401": { "description": "Identifiants invalides" }
+        }
+      }
+    },
+    "/api/users/me": {
+      "get": {
+        "tags": ["Auth/Users"],
+        "summary": "Profil connecté",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserSafe" } } } },
+          "401": { "description": "Non authentifié" }
+        }
+      }
+    },
+    "/api/users/{id}": {
+      "get": {
+        "tags": ["Auth/Users"],
+        "summary": "Obtenir un utilisateur (self ou admin)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "schema": { "type": "string" }, "required": true }],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserSafe" } } } },
+          "401": { "description": "Non authentifié" },
+          "403": { "description": "Interdit" },
+          "404": { "description": "Introuvable" }
+        }
+      },
+      "patch": {
+        "tags": ["Auth/Users"],
+        "summary": "Mettre à jour (self ou admin)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "schema": { "type": "string" }, "required": true }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserUpdate" } } }
+        },
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserSafe" } } } },
+          "401": { "description": "Non authentifié" },
+          "403": { "description": "Interdit" },
+          "404": { "description": "Introuvable" }
+        }
+      },
+      "delete": {
+        "tags": ["Auth/Users"],
+        "summary": "Supprimer (self ou admin)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "schema": { "type": "string" }, "required": true }],
+        "responses": {
+          "204": { "description": "Supprimé" },
+          "401": { "description": "Non authentifié" },
+          "403": { "description": "Interdit" },
+          "404": { "description": "Introuvable" }
+        }
+      }
+    },
+
+    "/api/restaurants": {
+      "get": {
+        "tags": ["Restaurants"],
+        "summary": "Lister restaurants (public, tri/pagination)",
+        "parameters": [
+          { "in": "query", "name": "sortBy", "schema": { "type": "string", "enum": ["name", "address"] } },
+          { "in": "query", "name": "order", "schema": { "type": "string", "enum": ["asc", "desc"] } },
+          { "in": "query", "name": "page", "schema": { "type": "integer", "default": 1 } },
+          { "in": "query", "name": "limit", "schema": { "type": "integer", "default": 10 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PaginatedRestaurants" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Restaurants"],
+        "summary": "Créer un restaurant (admin)",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RestaurantCreate" } } }
+        },
+        "responses": {
+          "201": { "description": "Créé", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Restaurant" } } } },
+          "400": { "description": "Validation error" },
+          "401": { "description": "Non authentifié" },
+          "403": { "description": "Interdit (admin)" }
+        }
+      }
+    },
+    "/api/restaurants/{id}": {
+      "get": {
+        "tags": ["Restaurants"],
+        "summary": "Obtenir un restaurant (public)",
+        "parameters": [{ "in": "path", "name": "id", "schema": { "type": "string" }, "required": true }],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Restaurant" } } } },
+          "404": { "description": "Introuvable" }
+        }
+      },
+      "patch": {
+        "tags": ["Restaurants"],
+        "summary": "Mettre à jour un restaurant (admin)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "schema": { "type": "string" }, "required": true }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RestaurantUpdate" } } }
+        },
+        "responses": {
+          "200": { "description": "OK" },
+          "401": { "description": "Non authentifié" },
+          "403": { "description": "Interdit (admin)" },
+          "404": { "description": "Introuvable" }
+        }
+      },
+      "delete": {
+        "tags": ["Restaurants"],
+        "summary": "Supprimer un restaurant (admin)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "schema": { "type": "string" }, "required": true }],
+        "responses": {
+          "204": { "description": "Supprimé" },
+          "401": { "description": "Non authentifié" },
+          "403": { "description": "Interdit (admin)" },
+          "404": { "description": "Introuvable" }
+        }
+      }
+    },
+
+    "/api/menus": {
+      "get": {
+        "tags": ["Menus"],
+        "summary": "Lister menus (public, tri/pagination, filtre restaurant_id)",
+        "parameters": [
+          { "in": "query", "name": "restaurant_id", "schema": { "type": "string" } },
+          { "in": "query", "name": "sortBy", "schema": { "type": "string", "enum": ["price", "category"] } },
+          { "in": "query", "name": "order", "schema": { "type": "string", "enum": ["asc", "desc"] } },
+          { "in": "query", "name": "page", "schema": { "type": "integer", "default": 1 } },
+          { "in": "query", "name": "limit", "schema": { "type": "integer", "default": 10 } }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaginatedMenus" } } } }
+        }
+      },
+      "post": {
+        "tags": ["Menus"],
+        "summary": "Créer un menu (admin)",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MenuCreate" } } }
+        },
+        "responses": {
+          "201": { "description": "Créé", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Menu" } } } },
+          "400": { "description": "Validation error" },
+          "401": { "description": "Non authentifié" },
+          "403": { "description": "Interdit (admin)" }
+        }
+      }
+    },
+    "/api/menus/{id}": {
+      "get": {
+        "tags": ["Menus"],
+        "summary": "Obtenir un menu (public)",
+        "parameters": [{ "in": "path", "name": "id", "schema": { "type": "string" }, "required": true }],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Menu" } } } },
+          "404": { "description": "Introuvable" }
+        }
+      },
+      "patch": {
+        "tags": ["Menus"],
+        "summary": "Mettre à jour un menu (admin)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "schema": { "type": "string" }, "required": true }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MenuUpdate" } } }
+        },
+        "responses": {
+          "200": { "description": "OK" },
+          "401": { "description": "Non authentifié" },
+          "403": { "description": "Interdit (admin)" },
+          "404": { "description": "Introuvable" }
+        }
+      },
+      "delete": {
+        "tags": ["Menus"],
+        "summary": "Supprimer un menu (admin)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "schema": { "type": "string" }, "required": true }],
+        "responses": {
+          "204": { "description": "Supprimé" },
+          "401": { "description": "Non authentifié" },
+          "403": { "description": "Interdit (admin)" },
+          "404": { "description": "Introuvable" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT" }
+    },
+    "schemas": {
+      "UserSafe": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "example": "66f3a0c2e0..." },
+          "email": { "type": "string", "example": "user@example.com" },
+          "username": { "type": "string", "example": "john" },
+          "role": { "type": "string", "enum": ["user", "admin"], "example": "user" }
+        }
+      },
+      "UserCreate": {
+        "type": "object",
+        "required": ["email", "username", "password"],
+        "properties": {
+          "email": { "type": "string" },
+          "username": { "type": "string" },
+          "password": { "type": "string", "format": "password" },
+          "role": { "type": "string", "enum": ["user", "admin"] }
+        }
+      },
+      "UserUpdate": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string" },
+          "username": { "type": "string" },
+          "password": { "type": "string", "format": "password" },
+          "role": { "type": "string", "enum": ["user", "admin"] }
+        }
+      },
+      "UserLogin": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": { "type": "string" },
+          "password": { "type": "string", "format": "password" }
+        }
+      },
+
+      "Restaurant": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string" },
+          "name": { "type": "string" },
+          "address": { "type": "string" },
+          "phone": { "type": "string" },
+          "opening_hours": { "type": "string" }
+        }
+      },
+      "RestaurantCreate": {
+        "type": "object",
+        "required": ["name", "address", "phone", "opening_hours"],
+        "properties": {
+          "name": { "type": "string" },
+          "address": { "type": "string" },
+          "phone": { "type": "string" },
+          "opening_hours": { "type": "string" }
+        }
+      },
+      "RestaurantUpdate": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "address": { "type": "string" },
+          "phone": { "type": "string" },
+          "opening_hours": { "type": "string" }
+        }
+      },
+      "PaginatedRestaurants": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/Restaurant" } },
+          "total": { "type": "integer" },
+          "page": { "type": "integer" },
+          "limit": { "type": "integer" }
+        }
+      },
+
+      "Menu": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string" },
+          "restaurant_id": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "price": { "type": "number" },
+          "category": { "type": "string" }
+        }
+      },
+      "MenuCreate": {
+        "type": "object",
+        "required": ["restaurant_id", "name", "price", "category", "description"],
+        "properties": {
+          "restaurant_id": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "price": { "type": "number", "minimum": 0 },
+          "category": { "type": "string" }
+        }
+      },
+      "MenuUpdate": {
+        "type": "object",
+        "properties": {
+          "restaurant_id": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "price": { "type": "number", "minimum": 0 },
+          "category": { "type": "string" }
+        }
+      },
+      "PaginatedMenus": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/Menu" } },
+          "total": { "type": "integer" },
+          "page": { "type": "integer" },
+          "limit": { "type": "integer" }
+        }
+      }
+    }
+  }
+}
